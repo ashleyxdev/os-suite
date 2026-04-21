@@ -34,6 +34,11 @@ $practicals = @(
        files = @("process1.c", "process2.c") }
 )
 
+# Resource files (downloaded to current directory, not into a folder)
+$resources = @(
+    @{ id = 99;  name = "SETUP.md"; desc = "WSL & Build Tools Setup Guide" }
+)
+
 # Display menu
 Write-Host "Available Practicals:"
 Write-Host "---------------------"
@@ -43,10 +48,33 @@ foreach ($p in $practicals) {
     Write-Host "     [$($p.folder)] $fileList"
 }
 
+Write-Host ""
+Write-Host "Resource Files:"
+Write-Host "---------------"
+foreach ($r in $resources) {
+    Write-Host "  $($r.id). $($r.desc)  [$($r.name)]"
+}
+
 # Prompt for choice
-$validIds = ($practicals | ForEach-Object { $_.id }) -join ", "
+$allIds = ($practicals | ForEach-Object { $_.id }) + ($resources | ForEach-Object { $_.id })
+$validIds = $allIds -join ", "
 Write-Host ""
 $choice = Read-Host "Enter your choice [$validIds]"
+
+# Check if it's a resource file
+$selectedResource = $resources | Where-Object { $_.id -eq [int]$choice }
+if ($selectedResource) {
+    $fileUrl = "$repoBase/$($selectedResource.name)"
+    Write-Host "`nDownloading $($selectedResource.name)..."
+    try {
+        Invoke-WebRequest -Uri $fileUrl -OutFile $selectedResource.name -ErrorAction Stop
+        Write-Host "✅ Download complete! File saved as: $($selectedResource.name)"
+    } catch {
+        Write-Host "❌ Failed to download file."
+    }
+    Write-Host "`nDone!"
+    exit
+}
 
 $selected = $practicals | Where-Object { $_.id -eq [int]$choice }
 

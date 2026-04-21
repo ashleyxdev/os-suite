@@ -22,6 +22,11 @@ PRACTICALS=(
     "8|practical-6.2|IPC using Shared Memory|process1.c,process2.c"
 )
 
+# Resource files (downloaded to current directory)
+RESOURCES=(
+    "99|SETUP.md|WSL & Build Tools Setup Guide"
+)
+
 # Display menu
 echo "Available Practicals:"
 echo "---------------------"
@@ -30,6 +35,14 @@ for entry in "${PRACTICALS[@]}"; do
     file_list="${files//,/, }"
     echo "  $id. $desc"
     echo "     [$folder] $file_list"
+done
+
+echo ""
+echo "Resource Files:"
+echo "---------------"
+for entry in "${RESOURCES[@]}"; do
+    IFS='|' read -r id name desc <<< "$entry"
+    echo "  $id. $desc  [$name]"
 done
 
 # Build valid IDs string
@@ -42,11 +55,33 @@ for entry in "${PRACTICALS[@]}"; do
         VALID_IDS="$id"
     fi
 done
+for entry in "${RESOURCES[@]}"; do
+    IFS='|' read -r id _ _ <<< "$entry"
+    VALID_IDS="$VALID_IDS, $id"
+done
 
 echo ""
 read -rp "Enter your choice [$VALID_IDS]: " CHOICE
 
-# Find the selected entry
+# Check if it's a resource file
+for entry in "${RESOURCES[@]}"; do
+    IFS='|' read -r id name desc <<< "$entry"
+    if [[ "$id" == "$CHOICE" ]]; then
+        FILE_URL="$REPO_BASE/$name"
+        echo ""
+        echo "Downloading $name..."
+        if curl -fsSL "$FILE_URL" -o "$name"; then
+            echo "✅ Download complete! File saved as: $name"
+        else
+            echo "❌ Failed to download file."
+        fi
+        echo ""
+        echo "Done!"
+        exit 0
+    fi
+done
+
+# Find the selected practical
 SELECTED=""
 for entry in "${PRACTICALS[@]}"; do
     IFS='|' read -r id folder desc files <<< "$entry"
