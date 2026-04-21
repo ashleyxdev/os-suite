@@ -1,104 +1,96 @@
 #!/usr/bin/env bash
 
 echo "================================================"
-echo "        Cloud Computing Lab"
+echo "        Operating System Lab"
 echo "        Lab File Downloader"
 echo "================================================"
 echo ""
 
 # Base URL of your GitHub repo (raw content)
-REPO_BASE="https://raw.githubusercontent.com/ashleyxdev/ccl-suite/main"
+REPO_BASE="https://raw.githubusercontent.com/ashleyxdev/os-suite/main"
 
-# Parallel arrays: ids, names, types, sections
-IDS=(1 4 6 7 8 9 10 99 100)
-
-NAMES=(
-    "1-linux-cmds.md"
-    "4-ec2-server.md"
-    "6-s3-bucket.md"
-    "7-terraform.md"
-    "8-ansible.md"
-    "9-docker.md"
-    "10-file-transfer.md"
-    "index.html"
-    "hello-world-key.pem"
+# Practicals definition
+# Format: ID|FOLDER|DESCRIPTION|FILE1,FILE2,...
+PRACTICALS=(
+    "1|practical-1|Library Management (Shell Script)|library.sh"
+    "2|practical-2.1|Fork, Zombie & Orphan Processes|fork-wait-demo.c,orphan-demo.c,zombie-demo.c"
+    "3|practical-2.2|Process Scheduling (FCFS, SJF, RR, Priority)|main.c,search.c"
+    "4|practical-3|Producer-Consumer Problem|producer-consumer.c"
+    "5|practical-4|Reader-Writer Problem|reader-writer.c"
+    "6|practical-5|Dining Philosophers Problem|dining_philosophers.c"
+    "7|practical-6.1|IPC using Pipes|pipes.c,test.txt"
+    "8|practical-6.2|IPC using Shared Memory|process1.c,process2.c"
 )
 
-TYPES=(
-    "Markdown"
-    "Markdown"
-    "Markdown"
-    "Markdown"
-    "Markdown"
-    "Markdown"
-    "Markdown"
-    "HTML"
-    "PEM"
-)
-
-SECTIONS=(
-    "Practical"
-    "Practical"
-    "Practical"
-    "Practical"
-    "Practical"
-    "Practical"
-    "Practical"
-    "Resource"
-    "Resource"
-)
-
-# Display: Lab Practicals
-echo "Lab Practicals:"
-echo "---------------"
-for i in "${!IDS[@]}"; do
-    if [[ "${SECTIONS[$i]}" == "Practical" ]]; then
-        echo "  ${IDS[$i]}. [${TYPES[$i]}] ${NAMES[$i]}"
-    fi
+# Display menu
+echo "Available Practicals:"
+echo "---------------------"
+for entry in "${PRACTICALS[@]}"; do
+    IFS='|' read -r id folder desc files <<< "$entry"
+    file_list="${files//,/, }"
+    echo "  $id. $desc"
+    echo "     [$folder] $file_list"
 done
 
-echo ""
-
-# Display: Resource Files
-echo "Resource Files:"
-echo "---------------"
-for i in "${!IDS[@]}"; do
-    if [[ "${SECTIONS[$i]}" == "Resource" ]]; then
-        echo "  ${IDS[$i]}. [${TYPES[$i]}] ${NAMES[$i]}"
+# Build valid IDs string
+VALID_IDS=""
+for entry in "${PRACTICALS[@]}"; do
+    IFS='|' read -r id _ _ _ <<< "$entry"
+    if [ -n "$VALID_IDS" ]; then
+        VALID_IDS="$VALID_IDS, $id"
+    else
+        VALID_IDS="$id"
     fi
 done
-
-# Build valid IDs string for display
-VALID_IDS=$(IFS=", "; echo "${IDS[*]}")
 
 echo ""
 read -rp "Enter your choice [$VALID_IDS]: " CHOICE
 
 # Find the selected entry
-SELECTED_INDEX=-1
-for i in "${!IDS[@]}"; do
-    if [[ "${IDS[$i]}" == "$CHOICE" ]]; then
-        SELECTED_INDEX=$i
+SELECTED=""
+for entry in "${PRACTICALS[@]}"; do
+    IFS='|' read -r id folder desc files <<< "$entry"
+    if [[ "$id" == "$CHOICE" ]]; then
+        SELECTED="$entry"
         break
     fi
 done
 
-if [[ $SELECTED_INDEX -eq -1 ]]; then
+if [ -z "$SELECTED" ]; then
     echo "Invalid choice! Please enter one of: $VALID_IDS"
     exit 1
 fi
 
-SELECTED_NAME="${NAMES[$SELECTED_INDEX]}"
-FILE_URL="$REPO_BASE/$SELECTED_NAME"
+# Parse selected entry
+IFS='|' read -r _ SEL_FOLDER SEL_DESC SEL_FILES <<< "$SELECTED"
+
+# Create the practical folder locally
+mkdir -p "$SEL_FOLDER"
 
 echo ""
-echo "Downloading $SELECTED_NAME..."
+echo "Downloading $SEL_FOLDER..."
 
-if curl -fsSL "$FILE_URL" -o "$SELECTED_NAME"; then
-    echo "✅ Download complete! File saved as: $SELECTED_NAME"
+FAILED=0
+
+# Download each source file
+IFS=',' read -ra FILE_ARRAY <<< "$SEL_FILES"
+for file in "${FILE_ARRAY[@]}"; do
+    FILE_URL="$REPO_BASE/$SEL_FOLDER/$file"
+    OUT_PATH="$SEL_FOLDER/$file"
+    if curl -fsSL "$FILE_URL" -o "$OUT_PATH"; then
+        echo "  ✅ $file"
+    else
+        echo "  ❌ Failed: $file"
+        FAILED=1
+    fi
+done
+
+if [ "$FAILED" -eq 1 ]; then
+    echo ""
+    echo "⚠️  Some files failed to download. Check the repository link."
 else
-    echo "❌ Failed to download file. Please check the repository link or filename."
-    exit 1
+    echo ""
+    echo "✅ All files downloaded to ./$SEL_FOLDER/"
 fi
 
 echo ""
